@@ -70,10 +70,12 @@ contains
       real(dp) :: inlet_flow_curr,outlet_flow
       character(len=60) :: vessel_type2,rheology_type2
 
+      integer :: file_unit
+
       sub_name = 'evaluate_prq'
       call enter_exit(sub_name,1)
       call get_diagnostics_level(diagnostics_level)
-      
+
       iterative = .false.
 
       if(diagnostics_level.GT.1)then
@@ -176,7 +178,7 @@ contains
 !! Setting up mappings between nodes, elements and solution depvar
       call calc_depvar_maps(mesh_from_depvar,depvar_at_elem,&
          depvar_totals,depvar_at_node,mesh_dof,num_vars)
-      
+
 !! Define boundary conditions
       !first call to define inlet boundary conditions
       call boundary_conditions(ADD,FIX,bc_type,density,inletbc,outletbc,&
@@ -198,47 +200,41 @@ contains
             elem_field(ne_resist,nc) = cap_res
          enddo
       endif
-      
-      print *, "=========================================================="
-      print *, "Element | Resistance (Pa.s/mm³) | Radius (mm) | Length (mm)"
-      print *, "=========================================================="
-
-      do ne = 1, num_elems
-         print '(I5, 2X, E15.7, 2X, E15.7, 2X, E15.7)', &
-            ne, elem_field(ne_resist, ne), elem_field(ne_radius, ne), elem_field(ne_length, ne)
-      end do
-
-      print *, "=========================================================="
 
       if(diagnostics_level.eq.-1) then
+         print *, "CHANGING RESISTANCES TO 1"
          elem_field(ne_resist, ne) = 0
          do ne=2,num_elems
             elem_field(ne_resist, ne) = 1
          enddo
       endif
-      
-      print *, "=========================================================="
-      print *, "Element | Resistance (Pa.s/mm³) | Radius (mm) | Length (mm)"
-      print *, "=========================================================="
 
+      ! Write resistances, radii and lengths to a csv file
+      open(unit=file_unit, file='./../../../repro-examples/fetoplacental/interface2015/output/radii_values.csv', &
+         status='replace', action='write')
+      write(file_unit, '(A)') 'element_id,resist,radius,length'
       do ne = 1, num_elems
-         print '(I5, 2X, E15.7, 2X, E15.7, 2X, E15.7)', &
+         write(file_unit, '(I0, ",", E15.7, ",", E15.7, ",", E15.7)') &
             ne, elem_field(ne_resist, ne), elem_field(ne_radius, ne), elem_field(ne_length, ne)
       end do
+      close(file_unit)
+
+      print *, '✔️ Data written to "output.csv"'
+
 
       print *, "=========================================================="
-      
+
 
 !! Calculate sparsity structure for solution matrices
       !Determine size of and allocate solution vectors/matrices
-      do i = 1, 8
-         if (elem_cnct(1, 0, i) == 0) then  ! Assuming outlet nodes are detected with this
-            print *, "Outlet Node:", i
-         endif
-      enddo
-      do i = 1, mesh_dof
-         print *, "FIX(", i, ") = ", FIX(i)
-      enddo   
+      ! do i = 1, 8
+      !    if (elem_cnct(1, 0, i) == 0) then  ! Assuming outlet nodes are detected with this
+      !       print *, "Outlet Node:", i
+      !    endif
+      ! enddo
+      ! do i = 1, mesh_dof
+      !    print *, "FIX(", i, ") = ", FIX(i)
+      ! enddo
       call calc_sparse_size(mesh_dof,FIX,depvar_at_elem,MatrixSize,NonZeros,bc_type)
       allocate (SparseCol(NonZeros), STAT = AllocateStatus)
       if (AllocateStatus /= 0) STOP "*** Not enough memory for SparseCol array ***"
@@ -349,7 +345,7 @@ contains
                         call capillary_resistance(nc,vessel_type,rheology_type,P1,P2,cap_res,.True.)
                      else
                         call capillary_resistance(nc,vessel_type,rheology_type,P1,P2,cap_res,.False.)
-                     elem_field(ne_resist,nc) = cap_res
+                        elem_field(ne_resist,nc) = cap_res
                      endif
                   enddo
                endif
@@ -2058,45 +2054,45 @@ contains
          nnz = nnz+1
          SparseRow(MatrixSize+1) = nnz
 
-                  ! Print scalar values
-          print *, 'MatrixSize = ', MatrixSize
-          print *, 'NonZeros = ', NonZeros
+         ! Print scalar values
+         print *, 'MatrixSize = ', MatrixSize
+         print *, 'NonZeros = ', NonZeros
 
-          ! Print SparseRow array (first few values)
-          print *, 'SparseRow (first 10 elements):'
-          do i = 1, min(10, MatrixSize + 1)
-              print '(i5, 2x, i10)', i, SparseRow(i)
-          end do
+         ! Print SparseRow array (first few values)
+         print *, 'SparseRow (first 10 elements):'
+         do i = 1, min(10, MatrixSize + 1)
+            print '(i5, 2x, i10)', i, SparseRow(i)
+         end do
 
-          ! Print SparseCol array (first 10 elements)
-          print *, 'SparseCol (first 10 elements):'
-          do i = 1, min(10, NonZeros)
-              print '(i5, 2x, i10)', i, SparseCol(i)
-          end do
+         ! Print SparseCol array (first 10 elements)
+         print *, 'SparseCol (first 10 elements):'
+         do i = 1, min(10, NonZeros)
+            print '(i5, 2x, i10)', i, SparseCol(i)
+         end do
 
-          ! Print SparseVal array (first 10 values)
-          print *, 'SparseVal (first 10 values):'
-          do i = 1, min(10, NonZeros)
-              print '(i5, 2x, g14.6)', i, SparseVal(i)
-          end do
+         ! Print SparseVal array (first 10 values)
+         print *, 'SparseVal (first 10 values):'
+         do i = 1, min(10, NonZeros)
+            print '(i5, 2x, g14.6)', i, SparseVal(i)
+         end do
 
-          ! Print RHS vector (first 10 values)
-          print *, 'RHS (first 10 values):'
-          do i = 1, min(10, MatrixSize)
-              print '(i5, 2x, g14.6)', i, RHS(i)
-          end do
+         ! Print RHS vector (first 10 values)
+         print *, 'RHS (first 10 values):'
+         do i = 1, min(10, MatrixSize)
+            print '(i5, 2x, g14.6)', i, RHS(i)
+         end do
 
-          ! Print initial Solution vector (first 10 values)
-          print *, 'Initial Solution (first 10 values):'
-          do i = 1, min(10, MatrixSize)
-              print '(i5, 2x, g14.6)', i, Solution(i)
-          end do
+         ! Print initial Solution vector (first 10 values)
+         print *, 'Initial Solution (first 10 values):'
+         do i = 1, min(10, MatrixSize)
+            print '(i5, 2x, g14.6)', i, Solution(i)
+         end do
 
-          ! Print solver parameters
-          print *, 'MaxIter = 500'
-          print *, 'KrylovDim = 500'
-          print *, 'Absolute Tolerance = ', 1.d-5
-          print *, 'Relative Tolerance = ', 1.d-4
+         ! Print solver parameters
+         print *, 'MaxIter = 500'
+         print *, 'KrylovDim = 500'
+         print *, 'Absolute Tolerance = ', 1.d-5
+         print *, 'Relative Tolerance = ', 1.d-4
 
          call pmgmres_ilu_cr(MatrixSize, NonZeros, SparseRow, SparseCol, SparseVal, Solution, &
             RHS, 500, 500,1.d-5,1.d-4, SOLVER_FLAG)
