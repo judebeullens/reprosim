@@ -18,9 +18,9 @@ jobs:
 #            os: windows-2022,
 #          }
         - {
-            name: "Ubuntu 20.04",
+            name: "Ubuntu Latest",
             build_type: "Release",
-            os: ubuntu-20.04,
+            os: ubuntu-latest,
           }
         - {
             name: "macOS Monterey 12",
