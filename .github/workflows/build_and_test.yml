@@ -23,9 +23,9 @@ jobs:
             os: ubuntu-latest,
           }
         - {
-            name: "macOS Monterey 12",
+            name: "macOS Latest",
             build_type: "Release",
-            os: macos-12,
+            os: macos-latest,
           }
     steps:
 # Useful for debugging dll load issues.
