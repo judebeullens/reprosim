@@ -210,7 +210,6 @@ jobs:
       shell: bash
       if: runner.os == 'macOS'
       run: |
-        brew install gcc@13
         cmake \
           -S reprosim \
           -B build-reprosim \
@@ -242,6 +241,8 @@ jobs:
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
           multi_config_dir=/${{ matrix.config.build_type }}
+        else
+          multi_config_dir=""
         fi
         
         ${{ steps.create-venv.outputs.pip_exe }} install wheel
