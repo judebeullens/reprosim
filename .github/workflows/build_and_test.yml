@@ -76,6 +76,11 @@ jobs:
       with:
         compiler: 'intel'
         version: '2023.2'
+    - name: Install build prerequisites – macOS
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install gcc@13 swig
 #    - name: Install oneAPI HPC kit
 #      if: runner.os == 'Windows'
 #      uses: hsorby/install-intelfortran-action@main
@@ -241,8 +246,6 @@ jobs:
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
           multi_config_dir=/${{ matrix.config.build_type }}
-        else
-          multi_config_dir=""
         fi
         
         ${{ steps.create-venv.outputs.pip_exe }} install wheel
